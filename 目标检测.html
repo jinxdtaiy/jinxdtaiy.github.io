@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"> 
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>目标检测</title>
+<style>
+  body {
+    
+    font-family: 'Arial', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-image: url('./white.jpg'); /* 背景图片路径需根据实际情况修改 */
+    background-repeat: repeat;
+    background-position: center;
+  }
+  .navbar {
+    display: flex;
+    justify-content: space-between;
+    padding: 1rem;
+    background-color: #1d3043;
+    color: white;
+  }
+  .navbar a, .navbar button {
+    color: white;
+    text-decoration: none;
+    padding: 0 1rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+  .navbar button:hover {
+    text-decoration: underline;
+  }
+  .card-container {
+    
+      display: flex;
+      justify-content: space-around;
+      margin-top: 120px;
+      margin-left: 200px;
+    }
+    .card {
+      position: relative; /* 新增的相对定位 */
+      width: 400px;
+      height: 500px;
+      background: white;
+      border-radius: 5px;
+      box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);
+      transition: 0.3s;
+      padding: 20px;
+      padding-bottom: 60px; /* 新增的底部填充，为.footer留出空间 */
+      box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between; 
+    }
+  .card:hover {
+    box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2);
+  }
+  .card img {
+    width: 100%;
+  }
+  .card-title {
+    text-align: center;
+    font-size: 24px;
+    color: #333;
+  }
+  .card-text {
+    text-align: center;
+    color: #777;
+  }
+  .card-footer {
+      position: absolute; /* 新增的绝对定位 */
+      bottom: 0; /* 新增的属性，将.footer固定在底部 */
+      left: 0;
+      right: 0;
+      background-color: #00bcd4;
+      padding: 10px 20px;
+      color: white;
+      text-align: center;
+      border-bottom-left-radius: 5px;
+      border-bottom-right-radius: 5px;
+    }
+  .modal {
+    display: none;
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 160%;
+    height: 160%;
+    background: rgba(0,0,0,0.5);
+    align-items: center;
+    justify-content: center;
+    z-index: 1000; /* 更高的层级值 */
+  }
+  .modal-content {
+    background: #fff;
+    padding: 50px;
+    width: 300px;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    text-align: center;
+    top: 0; /* 直接放置在顶部 */
+    left: 100%; /* 水平居中 */
+    transform: translate(10%, 0%); /* 左移半个元素的宽度，确保居中 */
+  }
+  .modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1000; /* 确保遮罩层位于页面内容之上 */
+  display: flex;
+  justify-content: center; /* 水平居中 */
+  align-items: center; /* 垂直居中 */
+  }
+  .auth-field {
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    padding: 10px;
+    margin-bottom: 8px;
+    width: calc(100% - 20px);
+  }
+  .auth-btn {
+    background-color: #2196f3;
+    border: none;
+    border-radius: 3px;
+    padding: 10px;
+    width: calc(100% - 20px);
+    color: white;
+    cursor: pointer;
+    margin-bottom: 8px;
+  }
+  .auth-btn:hover {
+    background-color: #0b7dda;
+  }
+  .tag {
+    display: none;
+    background-color: #00bcd4;
+    color: white;
+    padding: 0.5rem 1rem;
+    margin: 1rem;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+    width: auto;
+    max-width: 80%;
+    text-align: center;
+  }
+  .upload-btn {
+    background-color: #2196f3;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    outline: none;
+    font-size: 16px;
+    margin-top: auto; /* Push the button to the bottom */
+    display: block; /* 确保按钮显示 */
+    text-align: center; /* 将按钮文本居中 */
+  }
+
+ 
+  .image-container {
+    width: 100%;
+    flex-grow: 1; /* Allow the container to fill the space */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden; /* Hide the overflow */
+    background-repeat: repeat; /* 设置背景图片平铺 */
+    background-size: contain; /* 调整图片大小以适应容器 */
+  }
+ /* 新增显示上传图片样式 */
+    .upload-img {
+        max-width: 100%;
+        max-height: 100%;
+        background-size: cover; /* Cover the available space */
+    }
+     /* 新增侧边栏样式 */
+    .sidebar {
+    position: fixed; /* 固定定位 */
+    top: 3.3rem; /* 顶部对齐 */
+    left: 0; /* 左侧对齐 */
+    width: 200px; /* 侧边栏宽度 */
+    height: 100%; /* 高度填满视口 */
+    background-color: #213d5b; /* 背景颜色 */
+    /* border-right: 2px solid black; */
+    padding: 20px; /* 内边距 */
+    box-sizing: border-box; /* 边框和内边距包含在宽度内 */
+    overflow-y: auto; /* 内容超出时垂直滚动 */
+    z-index: 1000; /* 高于其他元素 */
+    
+  }
+
+  /* 侧边栏内的链接样式 */
+  .sidebar a {
+    display: block;
+    color: white;
+    padding: 10px;
+    text-decoration: none;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #ccc; /* 设置分割线的颜色和宽度 */
+    transition: background-color 0.3s ease; /*平滑过渡效果*/
+    /* border: 1px solid black; 添加黑色边框 */
+  }
+
+  .sidebar a:hover {
+    background-color:  rgba(255, 255, 255, 0.1); /* 悬停背景颜色 */
+    color: #ddd; /* 悬停时的文字颜色 */
+  }
+  .sidebar a i {
+  margin-right: 8px; /* 在图标和文本之间添加一些间隔 */
+  }
+
+  .content {
+    margin-left: 220px; /* 应至少等于侧边栏的宽度加上padding */
+    padding-top: 1rem; /* 添加顶部padding */
+  }
+
+  .time-range-picker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 5px 0; /* 调整上下边距为5px */
+  margin-right: 550px;
+}
+
+  .time-range-picker input[type="datetime-local"] {
+    margin: 0 5px; /* 调整输入框之间的边距 */
+  }
+
+  /* 可以增加一些额外的样式来让输入框更漂亮 */
+  .time-range-picker input[type="datetime-local"] {
+    margin: 0 5px; /* 调整输入框之间的边距 */
+    padding: 10px; /* 增加填充，使选择器更高 */
+    font-size: 1em; /* 与周围文字大小保持一致 */
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    /* 其他想要的样式 */
+  }
+
+  /* 间隔符的样式，如有需要 */
+  .time-range-picker span {
+  margin-right: 5px; /* 在标签和选择器之间添加一些间隔 */
+  font-weight: bold; /* 加粗字体 */
+}
+
+</style>
+</head>
+<body>
+  
+<div class="navbar">
+    <div>麦穗计数系统</div>
+    <div>
+        <a href="./temp.html">首页</a>
+        <a href="./目标检测.html" >目标检测</a>
+        <a href="#">技术支持</a>
+        <a href="#">联系方式</a>
+        <button id="loginBtn">退出</button>
+    </div>
+</div>
+    
+
+
+<div class="card-container">
+    <div class="card" id="uploadCard">
+      <div class="card-title">上传图片</div>
+      <div class="image-container" id="imageContainer"></div>
+      <input type="file" id="imageUpload" style="display: none;" />
+      <label for="imageUpload" class="upload-btn">点击上传图片</label>
+      <div class="card-footer">原始图片</div>
+    </div>
+    <div class="card">
+      <div class="card-title">结果分析</div>
+      <div class="card-footer">检测结果</div>
+    </div>
+</div>
+
+<!-- 时间选择器 -->
+<div class="time-range-picker">
+  <span> 拍摄日期 <span>
+  <input type="datetime-local" id="startTime" name="startTime">
+</div>
+
+<div class="sidebar">
+  <a href="#system-introduction"><i class="fas fa-info-circle"></i>系统介绍</a>
+  <a href="个人信息.html"><i class="fas fa-user"></i>个人信息</a>
+  <a href="目标检测.html"><i class="fas fa-seedling"></i>计数检测</a>
+  <a href="历史数据.html"><i class="fas fa-history"></i>历史数据</a>
+</div>
+
+<script>
+    document.getElementById('imageUpload').addEventListener('change', function(event) {
+    if (event.target.files.length > 0) {
+      var uploadedFile = event.target.files[0];
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var imageContainer = document.getElementById('imageContainer');
+        imageContainer.innerHTML = ''; // 清空现有的内容
+        var img = document.createElement('img');
+        img.src = e.target.result;
+        img.style.maxWidth = '100%';
+        img.style.maxHeight = '100%';
+        imageContainer.appendChild(img); // 在容器中显示图片
+      };
+      reader.readAsDataURL(uploadedFile);
+    }
+});
+
+
+function toggleAuthFields(isRegistering) {
+  var confirmPassword = document.getElementById('confirmPassword');
+  var email = document.getElementById('email');
+  confirmPassword.style.display = isRegistering ? 'block' : 'none';
+  email.style.display = isRegistering ? 'block' : 'none';
+}
+
+document.getElementById('loginBtn').addEventListener('click', function() {
+        // 进行页面跳转，更改以下URL为你的登录页面地址
+        window.location.href = '登录.html'; // 假设你的登录页面命名为login.html
+    });
+
+
+
+
+</script>
+
+</body>
+</html>
